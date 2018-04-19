@@ -1,0 +1,81 @@
+---
+github_repo: &github_repo
+  plugins:
+    github: 
+      api_key: deadbeef
+
+containers:
+  rpm: centos
+  deb: ubuntu
+
+projects:
+
+  project-1:
+    <<: *github_repo # Plugins are inherited for each job
+    name: My Awesome Project No. 1
+    jobs:
+
+      # Application from another mother is a standalone application with no
+      # dependencies
+      application-from-another-mother:
+        url: git+file://home/u4007150/buildserver/application-from-another-mother
+        artifacts: &application_from_another_mother
+          rpm:
+            devel: application-from-another-mother-devel
+          deb:
+            devel: application-from-another-mother-dev
+
+  project-2:
+    <<: *github_repo
+    name: My Awesome Project No. 2
+    jobs:
+
+      # Application 1 depends on something in another project
+      application-1:
+        url: git+file:///home/u4007150/buildserver/application-1
+        artifacts: &application_1
+          rpm:
+            devel: application-1-devel
+            runtime: application-1
+          deb:
+            devel: application-1-dev
+            runtime: application-1
+        depends:
+        - *application_from_another_mother
+
+      # Application 2 depends on external binaries and on application 1,
+      # additionally it is located on github so we need the github plugin
+      # for login details
+      application-2:
+        url: git+file:///home/u4007150/buildserver/application-2
+        artifacts: &application_2
+          rpm:
+            devel: application-2-devel
+            runtime: application-2
+          deb:
+            devel: application-2-dev
+            runtime: application-2
+        dependencies:
+        - *application_1
+        - rpm:
+            devel: ncurses-devel
+            runtime: ncurses
+          deb:
+            devel: libncurses-dev
+            runtime: libncurses
+        
+
+      # Application 3 depends on both application 1 and application 3,
+      # it is also located on github
+      application-3:
+        url: git+file:///home/u4007150/buildserver/application-3
+        artifacts: &application_3
+          rpm:
+            devel: application-3-devel
+            runtime: application-3
+          deb:
+            devel: application-3-dev
+            runtime: application-2
+        dependencies:
+          - *application_1
+          - *application_2

@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+
+import yaml, json, base64
+from jq import jq
+
+class Config(dict):
+    def __init__(self, config='project.yaml'):
+        self.update(yaml.load(open(config)))
+        self._calculate_job_ids()
+
+    def _calculate_job_ids(self):
+        print(json.dumps(self))
+        #print(jq('.').transform(self))
+
+config = Config('project.yaml')
+#artifacts = [x.value for x in parse('projects.*..artifacts').find(config)]
+#print(artifacts)
+
+
+
