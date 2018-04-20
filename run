@@ -1,20 +1,72 @@
 #!/usr/bin/env python3
 
-import yaml, json, base64
+import yaml, json, base64, docker
 from jq import jq
 
 class Config(dict):
-    def __init__(self, config='project.yaml'):
-        self.update(yaml.load(open(config)))
-        self._calculate_job_ids()
+    def __init__(self, config_file='project.yaml'):
+        self.file = config_file
+        self.update(yaml.load(open(config_file)))
+        #self.jobs = jq('[path(.projects[].jobs[])|join("/")|@base64]').transform(self)
 
-    def _calculate_job_ids(self):
-        print(json.dumps(self))
-        #print(jq('.').transform(self))
+def generate_github_webhook(config):
+    jobs = jq('''
+    [.projects | to_entries[] | select(.value.plugins.github != null) 
+    | .value.jobs[] += {project: .key, api_key: .value.plugins.github.api_key} 
+    | .value.jobs | to_entries[] | .value += {job: .key} | .value]
+    ''').transform(config)
+
+    check_signature = lambda job: {
+        'match': {
+            'type': 'payload-hash-sha1',
+            'secret': job['api_key'],
+            'parameter': {
+                'source': 'header',
+                'name': 'X-Hub-Signature'
+            }
+        }
+    }
+
+    check_url = lambda job: {
+        'match': {
+            'type': 'value',
+            'value': job['url'],
+            'parameter': {
+                'source': 'payload',
+                'name': 'repository.clone_url'
+            }
+        }
+    }
+
+    check_event = lambda job, event: {
+        'match': {
+            'type': 'value',
+            'value': event,
+            'parameter': {
+                'source': 'header',
+                'name': 'X-GitHub-Event'
+            }
+        }
+    }
+    
+    return [{
+        'id': 'github-webhook',
+        'execute-command': 'echo',
+        'pass-arguments-to-command': [
+            {
+                'source': 'payload',
+                'name': 'pusher.name'
+            }
+        ],
+        'trigger-rule': {
+            'or': [{'and': [check_signature(job), check_url(job)]} for job in jobs]
+        }
+    }]
 
 config = Config('project.yaml')
+webhooks = generate_github_webhook(config)
+print(json.dumps(webhooks))
+
 #artifacts = [x.value for x in parse('projects.*..artifacts').find(config)]
 #print(artifacts)
-
-
 

@@ -1,8 +1,13 @@
 ---
-github_repo: &github_repo
+github_repo1: &github_repo1
   plugins:
     github: 
       api_key: deadbeef
+
+github_repo2: &github_repo2
+  plugins:
+    github: 
+      api_key: boobs
 
 containers:
   rpm: centos
@@ -11,14 +16,14 @@ containers:
 projects:
 
   project-1:
-    <<: *github_repo # Plugins are inherited for each job
+    <<: *github_repo1 # Plugins are inherited for each job
     name: My Awesome Project No. 1
     jobs:
 
       # Application from another mother is a standalone application with no
       # dependencies
       application-from-another-mother:
-        url: git+file://home/u4007150/buildserver/application-from-another-mother
+        url: https://github.com/buildserver-org/application-1.git
         artifacts: &application_from_another_mother
           rpm:
             devel: application-from-another-mother-devel
@@ -26,13 +31,13 @@ projects:
             devel: application-from-another-mother-dev
 
   project-2:
-    <<: *github_repo
+    <<: *github_repo2
     name: My Awesome Project No. 2
     jobs:
 
       # Application 1 depends on something in another project
       application-1:
-        url: git+file:///home/u4007150/buildserver/application-1
+        url: https://github.com/buildserver-org/application-1
         artifacts: &application_1
           rpm:
             devel: application-1-devel
